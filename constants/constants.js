@@ -7,7 +7,7 @@ export const types = [
 ]
 
 export const operators = [
-    { "=": "assign_operation" },
+    {"=": "assign_operation"},
     {"+": "sum_operation"},
     {"-": "subtract_operation"},
     {"*": "multiply_operation"},
@@ -23,3 +23,5 @@ export const operators = [
 ]
 
 export const keywords = [ "class", "public", "private", "for", "return", "if", "else", "while" ];
+
+export const keysymbols = [ ".", ";", ",", "(", ")", "[", "]", "{", "}" ];
