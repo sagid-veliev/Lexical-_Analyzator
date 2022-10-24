@@ -22,6 +22,6 @@ export const operators = [
     {"%": "modulo_operation"},
 ]
 
-export const keywords = [ "class", "public", "private", "for", "return", "if", "else", "while" ];
+export const keywords = ["class", "public", "private", "for", "return", "if", "else", "while"];
 
 export const keysymbols = [ ".", ";", ",", "(", ")", "[", "]", "{", "}" ];
