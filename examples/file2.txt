@@ -1,0 +1,5 @@
+integer warn = 22;
+
+while (variable < variable2) {
+    variable++;
+}

@@ -3,7 +3,6 @@ export const types = [
     { "uint": "32-bit unsigned integer" },
     { "long": "64-bit integer" },
     { "ulong": "64-bit unsigned integer" },
-    { "string": "string of chars" },
 ]
 
 export const operators = [

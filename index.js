@@ -3,13 +3,14 @@ import {types, operators, keywords, keysymbols} from './constants/constants.js';
 import {Variable} from './models/Variable.js';
 import {Lexem} from './models/Lexem.js';
 import {LexemProcessorStates} from './constants/LexemProcessorStates.js';
+import {Error} from './models/Error.js'
 let state = LexemProcessorStates.Idle;
 let lexems = [];
 let variables = [];
 
-function fileReader () {
+const fileReader = () => {
     let text = '';
-    const stream = fs.createReadStream('examples/file.txt');
+    const stream = fs.createReadStream('examples/file2.txt');
     stream.on('data', (chunk) => {
         text = chunk.toString();
         text = text.replace(/\r\n/g, "");
@@ -19,10 +20,10 @@ function fileReader () {
     });
 }
 
-function readProgram(program) {
+const readProgram = (program) => {
     let variable = new Variable();
     for (let item of program.split(' ')) {
-        if (!IsEmptyOrNextLine(item)) {
+        if (!IsEmptyOrNextLine(item) && state !== LexemProcessorStates.Final) {
             switch (state) {
                 case LexemProcessorStates.Idle:
                     if (isType(item)) {
@@ -34,6 +35,7 @@ function readProgram(program) {
                         addLexem('Identifier', 0, item);
                         state = LexemProcessorStates.ReadingIdentifier;
                     } else {
+                        new Error().getError(item);
                         state = LexemProcessorStates.Error;
                     }
                     break;
@@ -46,23 +48,25 @@ function readProgram(program) {
                         addLexem('Delimeter', isKeySymbol(item).id, item);
                         state = LexemProcessorStates.Delimeter;
                     } else {
+                        new Error().getError(item);
                         state = LexemProcessorStates.Error;
                     }
                     break;
                 case LexemProcessorStates.ReadingVariable:
-                    if (isDelimeter(item)) {
-                        addLexem('Operation', isDelimeter(item).id, item);
+                    if (isOperator(item)) {
+                        addLexem('Operation', isOperator(item).id, isOperator(item).operator);
                         state = LexemProcessorStates.Delimeter;
                     } else if (isKeySymbol(item)) {
                         addLexem('Delimeter', isKeySymbol(item).id, item);
                         state = LexemProcessorStates.Delimeter;
-                    } else {
+                    }  else {
+                        new Error().getError(item);
                         state = LexemProcessorStates.Error;
                     }
                     break;
                 case LexemProcessorStates.Delimeter:
                     if (isNumeric(+item)) {
-                        addLexem('Constant', item, `${variable.dataType} with value = ${item}`)
+                        addLexem('Constant', item, `${variable.dataType} with value = ${item}`);
                         state = LexemProcessorStates.ReadingNum;
                     } else if (isKeyWord(item) && item === 'while') {
                         addLexem('Identifier', isKeyWord(item).id, item);
@@ -74,7 +78,16 @@ function readProgram(program) {
                     } else if (isKeySymbol(item)) {
                         addLexem('Delimeter', isKeySymbol(item).id, item);
                         state = LexemProcessorStates.Delimeter;
+                    } else if (isOperator(item)) {
+                        addLexem('Operation', isOperator(item).id, isOperator(item).operator);
+                        state = LexemProcessorStates.Delimeter;
+                    } else if (isType(item)) {
+                        addLexem('DataType', isType(item).id, isType(item).type[item]);
+                        variable.dataType = isType(item).type[item];
+                        variable.id = variables.length;
+                        state = LexemProcessorStates.ReadingIdentifier;
                     } else {
+                        new Error().getError(item);
                         state = LexemProcessorStates.Error;
                     }
                     break;
@@ -83,18 +96,27 @@ function readProgram(program) {
                         addLexem('Delimeter', isKeySymbol(item).id, item);
                         state = LexemProcessorStates.Delimeter;
                     } else {
+                        new Error().getError(item);
                         state = LexemProcessorStates.Error;
                     }
+                    break;
                 case LexemProcessorStates.Error:
                     break;
             }
         }
     }
+    getList(lexems, variables);
+}
+
+const getList = (lexems,  variables) => {
+    console.log('Lexems:');
     console.log(lexems);
+    console.log('------------');
+    console.log('Variables:');
     console.log(variables);
 }
 
-function IsEmptyOrNextLine(input) {
+const IsEmptyOrNextLine = (input) => {
     return input == ' '
         || input == '\n'
         || input == '\t'
@@ -103,16 +125,15 @@ function IsEmptyOrNextLine(input) {
         || !input.length
 }
 
-
-function addLexem(type, id, value) {
+const addLexem = (type, id, value) => {
     lexems.push(new Lexem(type, id, value).toString());
 }
 
-function addVariable(id, dataType, name) {
+const addVariable = (id, dataType, name) => {
     variables.push(new Variable(id, dataType, name).toString());
 }
 
-function replaceLexems (program) {
+const replaceLexems = (program) => {
     let modifiedProgram = '';
     for (let lexem of program) {
         lexem = lexem.replace(/\++\\.|,|;|\(|\)|\[|\]|\{|\}/g, ` ${lexem} `);
@@ -121,7 +142,7 @@ function replaceLexems (program) {
     return modifiedProgram;
 }
 
-function isType (input) {
+const isType = (input) => {
     let result = false;
     types.forEach((type, id) => {
         if (type.hasOwnProperty(input)) result = { type, id };
@@ -129,8 +150,7 @@ function isType (input) {
     return result;
 } 
 
-function isKeyWord(input) {
-    // console.log(input)
+const isKeyWord = (input) => {
     let result = '';
     keywords.forEach((keyword, id) => {
         if (keyword === input) result = { keyword, id };
@@ -138,48 +158,27 @@ function isKeyWord(input) {
     return result;
 }
 
-function isVariable(input) {
+const isVariable = (input) => {
     if (!isKeyWord(input) && !isType(input)) {
         return !input.match(/^\d/) && input.match(/\w/gi) && input.match(/\w/gi).length === input.length;
     }
 }
 
-function isDelimeter(input) {
+const isOperator = (input) => {
     let result = '';
     operators.forEach((operator, id) => {
-        if (operator.hasOwnProperty(input)) result = { operator, id };
+        if (operator.hasOwnProperty(input)) {
+            result = { operator: operator[input], id };
+        }
     })
     return result;
 }
 
-function isNumeric(num) {
+const isNumeric = (num) => {
     return !isNaN(num) && typeof num === 'number'; 
 }
 
-function isKeySymbol(input) {
-    let result = '';
-    keysymbols.forEach((keysymbol, id) => {
-        if(keysymbol === input) result = { keysymbol, id };
-    })
-    return result;
-}
-
-function searchOperators (input) {
-    let result = false;
-    operators.forEach((operator, id) => {
-        if(operator.hasOwnProperty(input)) result = { operator, id };
-    })
-    return result;
-}
-
-function searchKeywords (input) {
-    let result = '';
-    keywords.forEach((keyword, id) => {
-        if(keyword === input) result = { keyword, id };
-    })
-    return result;
-}
-function searchKeysymbols (input) {
+const isKeySymbol = (input) => {
     let result = '';
     keysymbols.forEach((keysymbol, id) => {
         if(keysymbol === input) result = { keysymbol, id };
